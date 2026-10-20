@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Calaram meu Nordeste</title>
+<style>
+  :root { --g:#009c3b; --y:#ffdf00; --b:#002776; }
+  * { box-sizing: border-box; margin: 0; }
+  html { scroll-behavior: smooth; }
+  body { background: #000; color: #fff; font-family: 'Segoe UI', system-ui, sans-serif; min-height: 100vh; }
+  .flag { position: fixed; inset: 0; z-index: 0; opacity: .18; pointer-events: none;
+    background: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 720 504' preserveAspectRatio='xMidYMid slice'><rect width='720' height='504' fill='%23009c3b'/><polygon points='360,42 678,252 360,462 42,252' fill='%23ffdf00'/><circle cx='360' cy='252' r='109' fill='%23002776'/><path d='M254 222 Q360 190 466 262 L463 276 Q360 214 257 247Z' fill='%23fff'/></svg>") center/cover no-repeat; }
+  header { position: relative; z-index: 1; text-align: center; padding: 48px 16px 24px; }
+  h1 { font-size: clamp(2rem, 7vw, 4.5rem); letter-spacing: .04em; text-transform: uppercase; font-weight: 800;
+    background: linear-gradient(90deg, var(--g), var(--y), var(--g)); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  header p { color: #aaa; margin-top: 8px; letter-spacing: .2em; font-size: .8rem; text-transform: uppercase; }
+  main { position: relative; z-index: 1; max-width: 960px; margin: 0 auto; padding: 0 16px 80px; display: flex; flex-direction: column; gap: 28px; }
+  .item { background: rgba(10,10,10,.82); border: 1px solid #222; border-radius: 14px; overflow: hidden;
+    box-shadow: 0 8px 30px rgba(0,0,0,.7); opacity: 0; transform: translateY(30px); transition: opacity .6s, transform .6s; }
+  .item.in { opacity: 1; transform: none; }
+  .item.main { border-color: var(--y); box-shadow: 0 0 40px rgba(255,223,0,.18); }
+  .item video, .item img { display: block; width: 100%; max-height: 80vh; object-fit: contain; background: #000; }
+  .item img { cursor: zoom-in; }
+  .cap { padding: 10px 16px; font-size: .85rem; color: #bbb; display: flex; justify-content: space-between; }
+  .tag { color: var(--y); font-weight: 700; text-transform: uppercase; letter-spacing: .1em; }
+  .empty { text-align: center; color: #888; padding: 60px 0; }
+  #lb { position: fixed; inset: 0; background: rgba(0,0,0,.95); z-index: 10; display: none; align-items: center; justify-content: center; cursor: zoom-out; }
+  #lb img { max-width: 96vw; max-height: 96vh; }
+  #lb.on { display: flex; }
+</style>
+</head>
+<body>
+<div class="flag"></div>
+<header>
+  <h1>Calaram meu Nordeste</h1>
+  <p>Álbum</p>
+</header>
+<main id="album"></main>
+<div id="lb"><img alt=""></div>
+<script>
+const album = document.getElementById('album');
+const lb = document.getElementById('lb');
+lb.onclick = () => lb.classList.remove('on');
+document.addEventListener('keydown', e => e.key === 'Escape' && lb.classList.remove('on'));
+
+const io = new IntersectionObserver(es => es.forEach(e => {
+  if (e.isIntersecting) e.target.classList.add('in');
+  const v = e.target.querySelector('video');
+  if (v && !e.isIntersecting && !v.paused && !v.dataset.keep) v.pause();
+}), { threshold: .15 });
+
+fetch('/api/media').then(r => r.json()).then(items => {
+  if (!items.length) { album.innerHTML = '<div class="empty">Coloque fotos e vídeos na pasta <b>midia</b> e recarregue.</div>'; return; }
+  let firstVideo = true;
+  items.forEach(it => {
+    const d = document.createElement('div');
+    d.className = 'item';
+    let el;
+    if (it.type === 'video') {
+      el = document.createElement('video');
+      el.src = it.url; el.controls = true; el.preload = 'metadata'; el.playsInline = true;
+      if (firstVideo) { d.classList.add('main'); firstVideo = false; }
+    } else {
+      el = document.createElement('img');
+      el.src = it.url; el.loading = 'lazy'; el.alt = it.name;
+      el.onclick = () => { lb.querySelector('img').src = it.url; lb.classList.add('on'); };
+    }
+    const cap = document.createElement('div');
+    cap.className = 'cap';
+    cap.innerHTML = `<span>${it.name.replace(/\.[^.]+$/, '')}</span>` + (d.classList.contains('main') ? '<span class="tag">Principal</span>' : '');
+    d.append(el, cap);
+    album.appendChild(d);
+    io.observe(d);
+  });
+});
+</script>
+</body>
+</html>
