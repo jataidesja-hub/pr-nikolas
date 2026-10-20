@@ -80,6 +80,16 @@
   .views b { font-weight: 600; color: #ccc; }
   @keyframes blink { 50% { opacity: .25; } }
   @media (max-width: 520px) { #visits { right: 10px; bottom: 10px; padding: 8px 12px; } }
+  #refresh { position: fixed; left: 18px; bottom: 18px; z-index: 15; display: flex; align-items: center; gap: 8px; cursor: pointer;
+    padding: 10px 16px; border-radius: 40px; background: rgba(8,8,8,.75); border: 1px solid #262626; backdrop-filter: blur(10px);
+    color: #888; font: inherit; font-size: .65rem; letter-spacing: .2em; text-transform: uppercase; box-shadow: 0 10px 30px rgba(0,0,0,.8);
+    transition: color .2s, border-color .2s; }
+  #refresh:hover { color: var(--y); border-color: rgba(255,214,0,.5); }
+  #refresh svg { width: 14px; height: 14px; fill: currentColor; transition: transform .6s; }
+  #refresh:hover svg { transform: rotate(180deg); }
+  #refresh.spin svg { animation: spin .8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @media (max-width: 520px) { #refresh { left: 10px; bottom: 10px; padding: 8px 12px; } }
   #lb { position: fixed; inset: 0; background: rgba(0,0,0,.96); z-index: 30; display: none; align-items: center; justify-content: center; cursor: zoom-out; }
   #lb img { max-width: 96vw; max-height: 96vh; animation: fade .3s; }
   #lb.on { display: flex; }
@@ -101,6 +111,7 @@
 <main id="album"></main>
 <footer>Calaram meu Nordeste<small>Developed by Josias Ataide, sem fins lucrativos</small></footer>
 <div id="visits"><span class="dot"></span><span>Acessos</span><b id="vcount">&mdash;</b></div>
+<button id="refresh" type="button" onclick="this.classList.add('spin');setTimeout(()=>location.reload(),200)"><svg viewBox="0 0 24 24"><path d="M17.65 6.35A7.96 7.96 0 0012 4a8 8 0 108 8h-2a6 6 0 11-1.76-4.24L13 11h7V4l-2.35 2.35z"/></svg>Atualizar</button>
 <div id="lb"><img alt=""></div>
 <script>
 // título animado letra por letra
