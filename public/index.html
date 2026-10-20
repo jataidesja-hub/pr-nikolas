@@ -50,7 +50,8 @@ const io = new IntersectionObserver(es => es.forEach(e => {
   if (v && !e.isIntersecting && !v.paused && !v.dataset.keep) v.pause();
 }), { threshold: .15 });
 
-fetch('/api/media').then(r => r.json()).then(items => {
+fetch('/api/media').then(r => { if (!r.ok || !(r.headers.get('content-type')||'').includes('json')) throw 0; return r.json(); })
+  .catch(() => fetch('/media.json').then(r => r.json())).then(items => {
   if (!items.length) { album.innerHTML = '<div class="empty">Coloque fotos e vídeos na pasta <b>midia</b> e recarregue.</div>'; return; }
   let firstVideo = true;
   items.forEach(it => {
