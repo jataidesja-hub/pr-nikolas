@@ -148,12 +148,18 @@ const API = 'https://abacus.jasoncameron.dev';
 const fmt = n => Number(n).toLocaleString('pt-BR');
 const slug = s => s.replace(/\.[^.]+$/, '').replace(/[^A-Za-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 50);
 function counter(action, key) {
-  return fetch(`${API}/${action}/${NS}/${key}`).then(r => r.json()).then(j => j.value ?? 0).catch(() => null);
+  return fetch(`${API}/${action}/${NS}/${key}`)
+    .then(r => r.ok ? r.json() : null)
+    .then(j => (j && typeof j.value === 'number') ? j.value : null)
+    .catch(() => null);
 }
 const vis = document.getElementById('visits');
 const pollers = [];
 function setNum(el, v) {
-  if (v === null || el.textContent === fmt(v)) return;
+  if (v === null) return;
+  const cur = Number(el.dataset.v || 0);
+  if (v < cur || v === cur && el.dataset.v) return; // contagem so cresce; ignora respostas ruins
+  el.dataset.v = v;
   el.textContent = fmt(v);
   el.classList.remove('tick'); void el.offsetWidth; el.classList.add('tick');
 }
@@ -173,7 +179,7 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden) { pa
   sessionStorage.setItem('visitado', '1');
   counter(first ? 'hit' : 'get', 'acessos-pagina').then(v => {
     if (v === null) { vis.style.display = 'none'; return; }
-    document.getElementById('vcount').textContent = fmt(v);
+    setNum(document.getElementById('vcount'), v);
   });
 })();
 
