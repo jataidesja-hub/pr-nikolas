@@ -69,6 +69,17 @@
   .empty { text-align: center; color: #666; padding: 60px 0; }
   footer { position: relative; z-index: 2; text-align: center; padding: 30px 0 70px; font-family: 'Anton'; letter-spacing: .3em; color: #333; text-transform: uppercase; }
   footer small { display: block; margin-top: 14px; font-family: 'Inter', sans-serif; font-size: .6rem; letter-spacing: .1em; text-transform: none; color: #444; }
+  #visits { position: fixed; right: 18px; bottom: 18px; z-index: 15; display: flex; align-items: center; gap: 10px;
+    padding: 10px 16px; border-radius: 40px; background: rgba(8,8,8,.75); border: 1px solid #262626; backdrop-filter: blur(10px);
+    box-shadow: 0 10px 30px rgba(0,0,0,.8), 0 0 24px rgba(255,214,0,.08); font-size: .65rem; letter-spacing: .2em; text-transform: uppercase; color: #888;
+    will-change: transform; transition: transform .25s ease-out; }
+  #visits .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--g); box-shadow: 0 0 10px var(--g); animation: blink 1.6s infinite; }
+  #visits b { font-family: 'Anton'; font-weight: 400; font-size: 1.25rem; letter-spacing: .06em; color: var(--y); }
+  .views { display: inline-flex; align-items: center; gap: 6px; color: #888; }
+  .views svg { width: 14px; height: 14px; fill: var(--y); }
+  .views b { font-weight: 600; color: #ccc; }
+  @keyframes blink { 50% { opacity: .25; } }
+  @media (max-width: 520px) { #visits { right: 10px; bottom: 10px; padding: 8px 12px; } }
   #lb { position: fixed; inset: 0; background: rgba(0,0,0,.96); z-index: 30; display: none; align-items: center; justify-content: center; cursor: zoom-out; }
   #lb img { max-width: 96vw; max-height: 96vh; animation: fade .3s; }
   #lb.on { display: flex; }
@@ -89,6 +100,7 @@
 </header>
 <main id="album"></main>
 <footer>Calaram meu Nordeste<small>Developed by Josias Ataide, sem fins lucrativos</small></footer>
+<div id="visits"><span class="dot"></span><span>Acessos</span><b id="vcount">&mdash;</b></div>
 <div id="lb"><img alt=""></div>
 <script>
 // título animado letra por letra
@@ -116,11 +128,30 @@ lb.onclick = () => lb.classList.remove('on');
 document.addEventListener('keydown', e => e.key === 'Escape' && lb.classList.remove('on'));
 
 // barra de progresso + parallax
+// contadores globais (abacus.jasoncameron.dev)
+const NS = /^(localhost|127\.)/.test(location.hostname) ? 'calaram-nordeste-dev' : 'calaram-nordeste';
+const API = 'https://abacus.jasoncameron.dev';
+const fmt = n => Number(n).toLocaleString('pt-BR');
+const slug = s => s.replace(/\.[^.]+$/, '').replace(/[^A-Za-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 50);
+function counter(action, key) {
+  return fetch(`${API}/${action}/${NS}/${key}`).then(r => r.json()).then(j => j.value ?? 0).catch(() => null);
+}
+const vis = document.getElementById('visits');
+(function () {
+  const first = !sessionStorage.getItem('visitado'); // conta cada nova entrada (sessão)
+  sessionStorage.setItem('visitado', '1');
+  counter(first ? 'hit' : 'get', 'acessos-pagina').then(v => {
+    if (v === null) { vis.style.display = 'none'; return; }
+    document.getElementById('vcount').textContent = fmt(v);
+  });
+})();
+
 const bar = document.getElementById('bar'), flag = document.getElementById('flag');
 function onScroll() {
   const max = document.documentElement.scrollHeight - innerHeight;
   bar.style.width = (max > 0 ? scrollY / max * 100 : 0) + '%';
   flag.style.transform = `translateY(${-scrollY * .08}px) scale(${1 + scrollY / 12000})`;
+  vis.style.transform = `translateY(${Math.sin(scrollY / 160) * 8}px)`;
 }
 addEventListener('scroll', onScroll, { passive: true }); onScroll();
 
@@ -152,6 +183,22 @@ fetch('/api/media').then(r => { if (!r.ok || !(r.headers.get('content-type')||''
     cap.className = 'cap';
     const isMain = d.classList.contains('main');
     cap.innerHTML = `<span class="n">${String(idx + 1).padStart(2, '0')}</span><span>Calaram meu Nordeste</span>` + (isMain ? '<span class="tag">Principal</span>' : '<span></span>');
+    if (it.type === 'video') {
+      const key = 'video-' + slug(it.name);
+      const views = document.createElement('span');
+      views.className = 'views';
+      views.innerHTML = '<svg viewBox="0 0 24 24"><path d="M12 5C6 5 2 12 2 12s4 7 10 7 10-7 10-7-4-7-10-7zm0 11a4 4 0 110-8 4 4 0 010 8zm0-6a2 2 0 100 4 2 2 0 000-4z"/></svg><b>0</b> visualizações';
+      const num = views.querySelector('b');
+      counter('get', key).then(v => { if (v !== null) num.textContent = fmt(v); });
+      let counted = false;
+      el.addEventListener('play', () => {
+        const k = 'v_' + key;
+        if (counted || sessionStorage.getItem(k)) return;
+        counted = true; sessionStorage.setItem(k, '1');
+        counter('hit', key).then(v => { if (v !== null) num.textContent = fmt(v); });
+      });
+      cap.replaceChild(views, cap.lastElementChild);
+    }
     d.append(el, cap);
     album.appendChild(d);
     io.observe(d);
