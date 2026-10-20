@@ -200,12 +200,14 @@ fetch('/api/media').then(r => { if (!r.ok || !(r.headers.get('content-type')||''
       views.className = 'views';
       views.innerHTML = '<svg viewBox="0 0 24 24"><path d="M12 5C6 5 2 12 2 12s4 7 10 7 10-7 10-7-4-7-10-7zm0 11a4 4 0 110-8 4 4 0 010 8zm0-6a2 2 0 100 4 2 2 0 000-4z"/></svg><b>0</b> visualizações';
       const num = views.querySelector('b');
-      counter('get', key).then(v => { if (v !== null) num.textContent = fmt(v); });
-      let counted = false;
+      const refreshNum = () => counter('get', key).then(v => { if (v !== null) num.textContent = fmt(v); });
+      refreshNum();
+      setInterval(refreshNum, 15000); // atualiza com plays de outras pessoas
+      let fresh = true; // true = proximo play conta (inicio ou apos terminar)
+      el.addEventListener('ended', () => { fresh = true; });
       el.addEventListener('play', () => {
-        const k = 'v_' + key;
-        if (counted || sessionStorage.getItem(k)) return;
-        counted = true; sessionStorage.setItem(k, '1');
+        if (!fresh) return; // retomar apos pausa nao conta
+        fresh = false;
         counter('hit', key).then(v => { if (v !== null) num.textContent = fmt(v); });
       });
       cap.replaceChild(views, cap.lastElementChild);
