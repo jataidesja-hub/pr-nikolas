@@ -78,6 +78,9 @@
   .views { display: inline-flex; align-items: center; gap: 6px; color: #888; }
   .views svg { width: 14px; height: 14px; fill: var(--y); }
   .views b { font-weight: 600; color: #ccc; }
+  .tick { animation: tick .6s ease-out; }
+  @keyframes tick { 0% { transform: scale(1.5); color: #fff; text-shadow: 0 0 14px var(--y); } 100% { transform: scale(1); } }
+  .views b, #vcount { display: inline-block; }
   @keyframes blink { 50% { opacity: .25; } }
   @media (max-width: 520px) { #visits { right: 10px; bottom: 10px; padding: 8px 12px; } }
   #refresh { position: fixed; left: 18px; bottom: 18px; z-index: 15; display: flex; align-items: center; gap: 8px; cursor: pointer;
@@ -148,6 +151,23 @@ function counter(action, key) {
   return fetch(`${API}/${action}/${NS}/${key}`).then(r => r.json()).then(j => j.value ?? 0).catch(() => null);
 }
 const vis = document.getElementById('visits');
+const pollers = [];
+function setNum(el, v) {
+  if (v === null || el.textContent === fmt(v)) return;
+  el.textContent = fmt(v);
+  el.classList.remove('tick'); void el.offsetWidth; el.classList.add('tick');
+}
+const vcount = document.getElementById('vcount');
+const pageRefresh = () => counter('get', 'acessos-pagina').then(v => setNum(vcount, v));
+// "tempo real": consulta a cada 3s (pausa com aba oculta; videos so se visiveis)
+const seen = new Set();
+const vio = new IntersectionObserver(es => es.forEach(e => e.isIntersecting ? seen.add(e.target) : seen.delete(e.target)));
+setInterval(() => {
+  if (document.hidden) return;
+  pageRefresh();
+  pollers.forEach(p => { if (seen.has(p.el)) p.run(); });
+}, 3000);
+document.addEventListener('visibilitychange', () => { if (!document.hidden) { pageRefresh(); pollers.forEach(p => seen.has(p.el) && p.run()); } });
 (function () {
   const first = !sessionStorage.getItem('visitado'); // conta cada nova entrada (sessão)
   sessionStorage.setItem('visitado', '1');
@@ -200,21 +220,21 @@ fetch('/api/media').then(r => { if (!r.ok || !(r.headers.get('content-type')||''
       views.className = 'views';
       views.innerHTML = '<svg viewBox="0 0 24 24"><path d="M12 5C6 5 2 12 2 12s4 7 10 7 10-7 10-7-4-7-10-7zm0 11a4 4 0 110-8 4 4 0 010 8zm0-6a2 2 0 100 4 2 2 0 000-4z"/></svg><b>0</b> visualizações';
       const num = views.querySelector('b');
-      const refreshNum = () => counter('get', key).then(v => { if (v !== null) num.textContent = fmt(v); });
+      const refreshNum = () => counter('get', key).then(v => setNum(num, v));
       refreshNum();
-      setInterval(refreshNum, 15000); // atualiza com plays de outras pessoas
+      pollers.push({ el: d, run: refreshNum }); // atualizacao ao vivo (so cards visiveis)
       let fresh = true; // true = proximo play conta (inicio ou apos terminar)
       el.addEventListener('ended', () => { fresh = true; });
       el.addEventListener('play', () => {
         if (!fresh) return; // retomar apos pausa nao conta
         fresh = false;
-        counter('hit', key).then(v => { if (v !== null) num.textContent = fmt(v); });
+        counter('hit', key).then(v => setNum(num, v));
       });
       cap.replaceChild(views, cap.lastElementChild);
     }
     d.append(el, cap);
     album.appendChild(d);
-    io.observe(d);
+    io.observe(d); vio.observe(d);
   });
 });
 </script>
