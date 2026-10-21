@@ -326,7 +326,7 @@ fetch('/api/media').then(r => { if (!r.ok || !(r.headers.get('content-type')||''
     const isMain = d.classList.contains('main');
     cap.innerHTML = `<span class="n">${String(idx + 1).padStart(2, '0')}</span><span>Calaram meu Nordeste</span>` + (isMain ? '<span class="tag">Principal</span>' : '<span></span>');
     if (it.type === 'video') {
-      const key = 'video-' + slug(it.name);
+      const key = it.key || ('video-' + slug(it.name));
       const views = document.createElement('span');
       views.className = 'views';
       views.innerHTML = '<svg viewBox="0 0 24 24"><path d="M12 5C6 5 2 12 2 12s4 7 10 7 10-7 10-7-4-7-10-7zm0 11a4 4 0 110-8 4 4 0 010 8zm0-6a2 2 0 100 4 2 2 0 000-4z"/></svg><b>0</b> visualizações';
