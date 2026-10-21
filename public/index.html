@@ -281,10 +281,17 @@ fetch('/api/media').then(r => { if (!r.ok || !(r.headers.get('content-type')||''
       el.addEventListener('volumechange', () => { snd.style.display = el.muted ? '' : 'none'; });
       snd.style.display = el.muted ? '' : 'none';
       autoEls.set(d, el);
-      el.addEventListener('play', () => {
-        if (!fresh) return; // retomar apos pausa nao conta
-        fresh = false;
-        counter('hit', key).then(v => setNum(num, v));
+      let pending = false;
+      el.addEventListener('timeupdate', () => {
+        // conta apos 2s assistidos (autoplay ou play manual); tenta de novo se falhar
+        if (!fresh || pending || el.currentTime < 2) return;
+        pending = true;
+        counter('hit', key).then(v => {
+          if (v === null) { setTimeout(() => { pending = false; }, 3000); return; } // falhou: tenta de novo em 3s
+          pending = false;
+          fresh = false;
+          setNum(num, v);
+        });
       });
       cap.replaceChild(views, cap.lastElementChild);
     }
