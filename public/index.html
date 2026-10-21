@@ -41,6 +41,14 @@
   .glow.b { background: var(--y); right: 12%; top: 35%; animation-delay: 3s; }
   .tag-line { color: #8a8a8a; font-weight: 300; letter-spacing: .25em; text-transform: uppercase; font-size: .8rem; opacity: 0; animation: fade 1.2s 2s forwards; }
   .tag-line b { color: var(--y); font-weight: 600; }
+  .ig { margin-top: 34px; display: inline-flex; align-items: center; gap: 10px; padding: 13px 26px; border-radius: 40px; text-decoration: none; color: #fff;
+    font-size: .72rem; font-weight: 600; letter-spacing: .22em; text-transform: uppercase; border: 1px solid rgba(255,214,0,.45);
+    background: rgba(10,10,10,.6); backdrop-filter: blur(8px); opacity: 0; animation: fade 1s 2.3s forwards; position: relative; overflow: hidden;
+    transition: transform .25s, box-shadow .25s, color .25s, background .25s; }
+  .ig svg { width: 18px; height: 18px; fill: currentColor; }
+  .ig::before { content: ''; position: absolute; inset: 0; background: linear-gradient(110deg, transparent 30%, rgba(255,214,0,.25), transparent 70%); transform: translateX(-100%); animation: sweep 3.5s 3s infinite; }
+  .ig:hover { transform: translateY(-3px) scale(1.04); color: #000; background: var(--y); box-shadow: 0 0 40px rgba(255,214,0,.35); }
+  @keyframes sweep { to { transform: translateX(100%); } }
   .scroll { margin-top: 48px; width: 22px; height: 38px; border: 2px solid #444; border-radius: 14px; position: relative; opacity: 0; animation: fade 1s 2.4s forwards; }
   .scroll::after { content: ''; position: absolute; left: 50%; top: 7px; width: 3px; height: 7px; margin-left: -1.5px; border-radius: 2px; background: var(--y); animation: wheel 1.6s infinite; }
   @keyframes letter { to { opacity: 1; transform: none; filter: blur(0); } }
@@ -109,6 +117,7 @@
   <div class="eyebrow">Álbum</div>
   <h1 id="title" aria-label="Calaram meu Nordeste"></h1>
   <div class="tag-line">Uma voz que <b>ninguém</b> vai calar</div>
+  <a class="ig" href="https://www.instagram.com/nikolasferreiradm" target="_blank" rel="noopener"><svg viewBox="0 0 24 24"><path d="M7 2h10a5 5 0 015 5v10a5 5 0 01-5 5H7a5 5 0 01-5-5V7a5 5 0 015-5zm0 2a3 3 0 00-3 3v10a3 3 0 003 3h10a3 3 0 003-3V7a3 3 0 00-3-3H7zm5 3.5a4.5 4.5 0 110 9 4.5 4.5 0 010-9zm0 2a2.5 2.5 0 100 5 2.5 2.5 0 000-5zM17.5 6a1 1 0 110 2 1 1 0 010-2z"/></svg>Siga no Instagram</a>
   <div class="scroll"></div>
 </header>
 <main id="album"></main>
