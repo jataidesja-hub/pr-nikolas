@@ -1,6 +1,7 @@
 const http = require('http');
 const fs = require('fs');
 const path = require('path');
+const { scan } = require('./scan');
 
 const PORT = process.env.PORT || 3000;
 const MEDIA = path.join(__dirname, 'midia');
@@ -16,18 +17,7 @@ const TYPES = {
 
 fs.mkdirSync(MEDIA, { recursive: true });
 
-function list() {
-  const items = fs.readdirSync(MEDIA)
-    .map(n => ({ n, e: path.extname(n).toLowerCase(), t: fs.statSync(path.join(MEDIA, n)).mtimeMs }))
-    .filter(f => VID.includes(f.e) || IMG.includes(f.e))
-    .map(f => ({ name: f.n, url: '/midia/' + encodeURIComponent(f.n), type: VID.includes(f.e) ? 'video' : 'image', time: f.t }));
-  items.sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true }));
-  // video principal: arquivo cujo nome começa com "principal", senão o primeiro vídeo
-  let i = items.findIndex(x => x.type === 'video' && /^principal/i.test(x.name));
-  if (i < 0) i = items.findIndex(x => x.type === 'video');
-  if (i > 0) items.unshift(items.splice(i, 1)[0]);
-  return items;
-}
+function list() { return scan(MEDIA); }
 
 function serve(req, res, file) {
   fs.stat(file, (err, st) => {
@@ -55,7 +45,8 @@ http.createServer((req, res) => {
     return res.end(JSON.stringify(list()));
   }
   if (url.startsWith('/midia/')) {
-    const f = path.join(MEDIA, path.basename(url));
+    const f = path.join(MEDIA, path.normalize(url.slice(7)));
+    if (!f.startsWith(MEDIA)) { res.writeHead(403); return res.end(); }
     return serve(req, res, f);
   }
   const rel = url === '/' ? 'index.html' : url.replace(/^\/+/, '');

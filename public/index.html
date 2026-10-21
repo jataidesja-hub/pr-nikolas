@@ -72,6 +72,18 @@
   .item.main { border-color: rgba(255,214,0,.45); box-shadow: 0 0 80px rgba(255,214,0,.1), 0 30px 80px #000; }
   .item video, .item img { display: block; width: 100%; max-height: 82vh; object-fit: contain; background: #000; }
   .item img { cursor: zoom-in; will-change: transform, opacity; }
+  .car { position: relative; will-change: transform, opacity; }
+  .track { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; -webkit-overflow-scrolling: touch; overscroll-behavior-x: contain; }
+  .track::-webkit-scrollbar { display: none; }
+  .slide { flex: 0 0 100%; scroll-snap-align: center; scroll-snap-stop: always; display: flex; align-items: center; justify-content: center; background: #000; }
+  .slide img { max-height: 82vh; }
+  .arr { position: absolute; top: 50%; transform: translateY(-50%); z-index: 3; width: 44px; height: 44px; border-radius: 50%; border: 1px solid rgba(255,214,0,.4);
+    background: rgba(0,0,0,.65); color: #fff; font-size: 1rem; cursor: pointer; backdrop-filter: blur(6px); transition: background .2s, color .2s; }
+  .arr:hover { background: var(--y); color: #000; }
+  .arr.l { left: 12px; } .arr.r { right: 12px; }
+  .dots { position: absolute; left: 0; right: 0; bottom: 12px; display: flex; justify-content: center; gap: 7px; z-index: 3; }
+  .dots i { width: 7px; height: 7px; border-radius: 50%; background: #555; transition: all .3s; }
+  .dots i.on { background: var(--y); width: 20px; border-radius: 6px; }
   .snd { position: absolute; top: 14px; right: 14px; z-index: 3; border: 1px solid rgba(255,214,0,.5); background: rgba(0,0,0,.7); color: #fff; backdrop-filter: blur(6px);
     padding: 8px 14px; border-radius: 30px; font: inherit; font-size: .7rem; letter-spacing: .12em; text-transform: uppercase; cursor: pointer; animation: blink 2s infinite; }
   .cap { padding: 14px 20px; font-size: .78rem; color: #777; display: flex; justify-content: space-between; align-items: center; letter-spacing: .12em; text-transform: uppercase; }
@@ -251,6 +263,42 @@ const io = new IntersectionObserver(es => es.forEach(e => {
   if (e.isIntersecting) e.target.classList.add('in');
 }), { threshold: .12 });
 
+// carrossel infinito (grupo de fotos = subpasta dentro de midia)
+function buildCarousel(g) {
+  const n = g.slides.length;
+  const car = document.createElement('div'); car.className = 'car';
+  const track = document.createElement('div'); track.className = 'track';
+  const mk = s => {
+    const w = document.createElement('div'); w.className = 'slide';
+    const im = document.createElement('img'); im.src = s.url; im.alt = s.name; im.loading = 'lazy'; im.draggable = false;
+    im.onclick = () => { lb.querySelector('img').src = s.url; lb.classList.add('on'); };
+    w.appendChild(im); return w;
+  };
+  [g.slides[n - 1], ...g.slides, g.slides[0]].forEach(s => track.appendChild(mk(s)));
+  const prev = document.createElement('button'), next = document.createElement('button');
+  prev.className = 'arr l'; next.className = 'arr r'; prev.type = next.type = 'button';
+  prev.innerHTML = '&#10094;'; next.innerHTML = '&#10095;'; prev.setAttribute('aria-label', 'Anterior'); next.setAttribute('aria-label', 'Próxima');
+  const dots = document.createElement('div'); dots.className = 'dots';
+  for (let i = 0; i < n; i++) dots.appendChild(document.createElement('i'));
+  car.append(track, prev, next, dots);
+  const W = () => track.clientWidth;
+  const jump = i => track.scrollTo({ left: i * W(), behavior: 'instant' });
+  const idx = () => Math.round(track.scrollLeft / (W() || 1));
+  const paint = () => { const k = ((idx() - 1) % n + n) % n; [...dots.children].forEach((d, i) => d.classList.toggle('on', i === k)); };
+  let t;
+  track.addEventListener('scroll', () => {
+    paint();
+    clearTimeout(t);
+    t = setTimeout(() => { const i = idx(); if (i === 0) jump(n); else if (i === n + 1) jump(1); }, 120);
+  }, { passive: true });
+  prev.onclick = () => track.scrollBy({ left: -W(), behavior: 'smooth' });
+  next.onclick = () => track.scrollBy({ left: W(), behavior: 'smooth' });
+  addEventListener('resize', () => jump(Math.max(1, Math.min(n, idx()))));
+  setTimeout(() => { jump(1); paint(); }, 50);
+  new ResizeObserver(() => { if (idx() === 0) jump(1); }).observe(track);
+  return car;
+}
+
 fetch('/api/media').then(r => { if (!r.ok || !(r.headers.get('content-type')||'').includes('json')) throw 0; return r.json(); })
   .catch(() => fetch('/media.json').then(r => r.json()))
   .then(items => {
@@ -264,6 +312,9 @@ fetch('/api/media').then(r => { if (!r.ok || !(r.headers.get('content-type')||''
       el = document.createElement('video');
       el.src = it.url; el.controls = true; el.preload = 'metadata'; el.playsInline = true;
       if (firstVideo) { d.classList.add('main'); firstVideo = false; }
+    } else if (it.type === 'group') {
+      el = buildCarousel(it);
+      imgs.push(el);
     } else {
       el = document.createElement('img');
       el.src = it.url; el.loading = 'lazy'; el.alt = it.name;
