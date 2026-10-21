@@ -210,15 +210,28 @@ function enableSound() { soundOn = true; videos.forEach(v => v.muted = false); }
 // primeiro toque/clique em qualquer lugar libera o som
 ['pointerdown', 'keydown'].forEach(ev => addEventListener(ev, () => { if (!soundOn) enableSound(); }, { once: false, passive: true }));
 
-// autoplay ao rolar: toca quando 60% visivel, pausa ao sair
-const ap = new IntersectionObserver(es => es.forEach(e => {
-  const v = autoEls.get(e.target);
-  if (!v) return;
-  if (e.isIntersecting) {
-    v.muted = !soundOn;
-    v.play().catch(() => { v.muted = true; v.play().catch(() => {}); });
-  } else if (!v.paused) v.pause();
-}), { threshold: .6 });
+// autoplay ao rolar: apenas UM video por vez (o mais proximo do centro, com >=55% visivel)
+let apBusy = false;
+function updateAuto() {
+  apBusy = false;
+  let best = null, bestD = Infinity;
+  autoEls.forEach((v, card) => {
+    const r = card.getBoundingClientRect();
+    const vis = Math.min(r.bottom, innerHeight) - Math.max(r.top, 0);
+    if (r.height > 0 && vis / Math.min(r.height, innerHeight) >= .55) {
+      const d = Math.abs(r.top + r.height / 2 - innerHeight / 2);
+      if (d < bestD) { bestD = d; best = v; }
+    }
+  });
+  autoEls.forEach(v => { if (v !== best && !v.paused) v.pause(); });
+  if (best && best.paused && !best.ended && !best.dataset.userPaused) {
+    best.muted = !soundOn;
+    best.play().catch(() => { best.muted = true; best.play().catch(() => {}); });
+  }
+}
+const queueAuto = () => { if (!apBusy) { apBusy = true; requestAnimationFrame(updateAuto); } };
+addEventListener('scroll', queueAuto, { passive: true });
+addEventListener('resize', queueAuto);
 
 // imagens expandem conforme chegam ao centro da tela
 function growImgs() {
@@ -297,9 +310,11 @@ fetch('/api/media').then(r => { if (!r.ok || !(r.headers.get('content-type')||''
     }
     d.append(el, cap);
     album.appendChild(d);
-    io.observe(d); vio.observe(d); if (autoEls.has(d)) ap.observe(d);
+    io.observe(d); vio.observe(d);
+    if (autoEls.has(d)) el.addEventListener('loadedmetadata', queueAuto);
   });
   growImgs();
+  setTimeout(queueAuto, 800);
 });
 </script>
 </body>
